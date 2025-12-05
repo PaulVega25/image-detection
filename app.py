@@ -78,17 +78,11 @@ async def analizar_imagen(imagen: UploadFile = File(...)) -> Dict:
         
         return {
             "valida": es_valida,
-            "numero_personas": resultado["numero_personas"],
             "mensaje": (
-                f"Imagen válida: se detectaron {resultado['numero_personas']} persona(s). Puede ser un hecho delictivo."
+                "Imagen válida: contiene persona(s)."
                 if es_valida
-                else "Imagen no válida: no se detectaron personas. No es un hecho delictivo válido (puede ser objeto, animal, etc.)."
-            ),
-            "confianza_promedio": resultado.get("confianza_promedio", 0.0),
-            "dimensiones_imagen": {
-                "ancho": img.width,
-                "alto": img.height
-            }
+                else "Imagen no válida: no contiene personas."
+            )
         }
         
     except Exception as e:

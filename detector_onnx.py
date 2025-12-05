@@ -40,8 +40,8 @@ class PersonDetectorONNX:
         
         return img_batch
     
-    def postprocess(self, outputs: np.ndarray, umbral_confianza: float = 0.4) -> List[Dict]:
-        """Procesar salidas de YOLO y filtrar personas"""
+    def postprocess(self, outputs: np.ndarray, umbral_confianza: float = 0.4, iou_threshold: float = 0.45) -> List[Dict]:
+        """Procesar salidas de YOLO y filtrar personas con NMS"""
         detecciones = []
         
         # outputs es una lista, tomar el primer elemento
@@ -54,9 +54,11 @@ class PersonDetectorONNX:
         else:
             predictions = output
         
+        # Recopilar todas las detecciones con confianza suficiente
+        boxes = []
+        scores = []
+        
         for pred in predictions:
-            # pred shape: (84,) = [x, y, w, h, conf_obj] + [80 confianzas de clases]
-            # Pero en YOLOv5u el formato es diferente: [x, y, w, h] + [80 confianzas]
             if len(pred) < 84:
                 continue
             
@@ -67,19 +69,44 @@ class PersonDetectorONNX:
             class_confidences = pred[4:]
             
             # Persona es clase 0
-            person_conf = class_confidences[0]
+            person_conf = float(class_confidences[0])
             
             if person_conf >= umbral_confianza:
-                detecciones.append({
-                    'bbox': [
-                        float(x_center - width/2),
-                        float(y_center - height/2),
-                        float(x_center + width/2),
-                        float(y_center + height/2)
-                    ],
-                    'confianza': float(person_conf),
-                    'clase': 'persona'
-                })
+                boxes.append([
+                    float(x_center - width/2),
+                    float(y_center - height/2),
+                    float(width),
+                    float(height)
+                ])
+                scores.append(person_conf)
+        
+        # Aplicar Non-Maximum Suppression si hay detecciones
+        if len(boxes) > 0:
+            boxes_array = np.array(boxes, dtype=np.float32)
+            scores_array = np.array(scores, dtype=np.float32)
+            
+            # NMS usando OpenCV
+            indices = cv2.dnn.NMSBoxes(
+                bboxes=boxes_array.tolist(),
+                scores=scores_array.tolist(),
+                score_threshold=umbral_confianza,
+                nms_threshold=iou_threshold
+            )
+            
+            # Crear lista de detecciones finales
+            if len(indices) > 0:
+                for i in indices.flatten():
+                    box = boxes[i]
+                    detecciones.append({
+                        'bbox': [
+                            box[0],
+                            box[1],
+                            box[0] + box[2],
+                            box[1] + box[3]
+                        ],
+                        'confianza': scores[i],
+                        'clase': 'persona'
+                    })
         
         return detecciones
     

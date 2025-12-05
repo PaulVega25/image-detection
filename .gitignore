@@ -1,0 +1,37 @@
+# Añadir archivos generados al .gitignore
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+build/
+dist/
+*.egg-info/
+
+# Modelo generado
+person_detector_model.joblib
+
+# Imágenes de prueba
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.bmp
+!test_image.jpg
+
+# Logs
+*.log
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Sistema operativo
+.DS_Store
+Thumbs.db

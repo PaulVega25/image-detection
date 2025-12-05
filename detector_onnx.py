@@ -44,20 +44,39 @@ class PersonDetectorONNX:
         """Procesar salidas de YOLO y filtrar personas"""
         detecciones = []
         
-        # outputs shape: (1, 84, 8400) - formato YOLOv5
-        predictions = outputs[0].transpose(0, 2, 1)[0]  # (8400, 84)
+        # outputs es una lista, tomar el primer elemento
+        output = outputs[0] if isinstance(outputs, (list, tuple)) else outputs
+        
+        # Shape: (1, 84, 8400) -> queremos (8400, 84)
+        # [batch, features, boxes] -> [boxes, features]
+        if len(output.shape) == 3:
+            predictions = output[0].T  # (84, 8400) -> (8400, 84)
+        else:
+            predictions = output
         
         for pred in predictions:
-            # pred: [x, y, w, h, conf_class0, conf_class1, ...]
-            x, y, w, h = pred[:4]
-            confidences = pred[4:]
+            # pred shape: (84,) = [x, y, w, h, conf_obj] + [80 confianzas de clases]
+            # Pero en YOLOv5u el formato es diferente: [x, y, w, h] + [80 confianzas]
+            if len(pred) < 84:
+                continue
+            
+            # Extraer bbox
+            x_center, y_center, width, height = pred[:4]
+            
+            # Las confianzas de clases están en pred[4:84]
+            class_confidences = pred[4:]
             
             # Persona es clase 0
-            person_conf = confidences[0]
+            person_conf = class_confidences[0]
             
             if person_conf >= umbral_confianza:
                 detecciones.append({
-                    'bbox': [x - w/2, y - h/2, x + w/2, y + h/2],
+                    'bbox': [
+                        float(x_center - width/2),
+                        float(y_center - height/2),
+                        float(x_center + width/2),
+                        float(y_center + height/2)
+                    ],
                     'confianza': float(person_conf),
                     'clase': 'persona'
                 })

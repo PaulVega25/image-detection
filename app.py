@@ -1,6 +1,5 @@
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.responses import JSONResponse
-import joblib
 import numpy as np
 from PIL import Image
 import io
@@ -9,17 +8,15 @@ from typing import Dict
 import sys
 from pathlib import Path
 
-# Importar la clase PersonDetector desde train_model
+# Importar el detector ONNX liviano
 sys.path.insert(0, str(Path(__file__).parent))
-from train_model import PersonDetector
+from detector_onnx import PersonDetectorONNX
 
 app = FastAPI(title="API de Detección de Personas", version="1.0.0")
 
 # Crear el detector al iniciar la aplicación
 try:
-    print("Cargando modelo YOLOv5...")
-    detector = PersonDetector()
-    print("✓ Modelo cargado exitosamente")
+    detector = PersonDetectorONNX("yolov5su.onnx")
 except Exception as e:
     print(f"Error al cargar el modelo: {e}")
     detector = None
